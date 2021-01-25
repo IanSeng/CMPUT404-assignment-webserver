@@ -30,9 +30,34 @@ import socketserver
 class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
-        self.data = self.request.recv(1024).strip()
+        self.data = self.request.recv(1024).strip().decode('utf-8')
         print ("Got a request of: %s\n" % self.data)
         self.request.sendall(bytearray("OK",'utf-8'))
+        request = self.data.splitlines()[0]
+        path = request.split()[1]
+        print(path)
+        filePath = ''
+        if(path.lstrip('/') == ''):
+            filePath = './www/index.html'
+
+        try: 
+            file = open(filePath, 'rb')
+            response = file.read()
+            file.close()
+            header = 'HTTP/1.1 200 OK\n'
+
+        except Exception as e:
+            header = 'HTTP/1.1 404 Not Found\n\n'
+            response = '<html><body><center><h3>Error 404: File not found</h3><p>Python HTTP Server</p></center></body></html>'.encode('utf-8')
+            
+        
+        final_response = header.encode('utf-8')
+        final_response += response
+        self.request.sendall(final_response)
+   
+
+
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
