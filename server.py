@@ -1,6 +1,6 @@
 #  coding: utf-8 
 import socketserver
-
+import os
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,24 +27,50 @@ import socketserver
 # try: curl -v -X GET http://127.0.0.1:8080/
 
 
+
 class MyWebServer(socketserver.BaseRequestHandler):
-    
+    def getMethod(self): 
+        return self.data.splitlines()[0].split()[0]
+
+    def getPath(self): 
+        return self.data.splitlines()[0].split()[1]
+
     def handle(self):
         self.data = self.request.recv(1024).strip().decode('utf-8')
         print ("Got a request of: %s\n" % self.data)
         self.request.sendall(bytearray("OK",'utf-8'))
-        request = self.data.splitlines()[0]
-        path = request.split()[1]
-        print(path)
-        filePath = ''
-        if(path.lstrip('/') == ''):
-            filePath = './www/index.html'
+       
+        # Get method and path
+        method = self.getMethod()
+        path = self.getPath()
 
+        # items = os.listdir("www")
+        # print(items)
+        # for i in items:
+        #     if i.endswith('.css'):
+        #         print("hello")
+        #         mimetype = 'text/css\r\n'
+        print(os.getcwd() + "/www" + path)
+        filePath = os.getcwd() + "/www" + path
+        if(path.lstrip('/') == ''):
+            filePath += 'index.html'
+        print("hello2")
         try: 
             file = open(filePath, 'rb')
             response = file.read()
             file.close()
-            header = 'HTTP/1.1 200 OK\n'
+            header = 'HTTP/1.1 200 OK\r\n'
+            print(filePath.endswith("css"))
+            # print(items.endswith("css"))
+      
+            if(filePath.endswith(".jpg")):
+                mimetype = 'image/jpg'
+            elif(filePath.endswith(".css")):
+                mimetype = 'text/css\r\n'
+            else:
+                mimetype = 'text/html\r\n'
+    
+            header += 'Content-Type: '+ mimetype +'\n\n'
 
         except Exception as e:
             header = 'HTTP/1.1 404 Not Found\n\n'
