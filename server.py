@@ -63,8 +63,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
         return ('HTTP/1.1 404 Not Found\n\n', '<html><body><center><h3>Error 404: File not found</h3><p>Python HTTP Server</p></center></body></html>'.encode(
             'utf-8'))
     
-    def response301(self):
-        return ('HTTP/1.1 301 Not Found\n\n', '<html><body><center><h3>Error 301: File not found</h3><p>Python HTTP Server</p></center></body></html>'.encode(
+    def response301(self, path):
+        print(f'localhost:8080{path}/')
+        return (f'HTTP/1.1 301 Moved Permanently\nLocation: {path}/\n\n', '<html><body><center><h3>Error 301: Moved Permanently</h3><p>Python HTTP Server</p></center></body></html>'.encode(
             'utf-8'))
 
     def handle(self):
@@ -88,7 +89,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
         else:
             try:
                 if(not (os.path.isfile(filePath)) and self.pathCheck(path)):
-                    header, response = self.response301()
+                    
+                    header, response = self.response301(path)
                 else:
                     header = 'HTTP/1.1 200 OK\r\n'
                     response = self.openFile(filePath)
@@ -97,6 +99,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
             except Exception as e:
                 header, response = self.response404()
+            
 
         final_response = header.encode('utf-8')
         final_response += response
