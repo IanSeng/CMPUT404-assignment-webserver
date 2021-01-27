@@ -29,6 +29,10 @@ from pathlib import Path
 
 
 class MyWebServer(socketserver.BaseRequestHandler):
+    def openFile(self, filePath):
+        with open(filePath,'rb') as file:
+            return file.read()
+
     def getMethod(self):
         return self.data.splitlines()[0].split()[0]
 
@@ -36,36 +40,24 @@ class MyWebServer(socketserver.BaseRequestHandler):
         return self.data.splitlines()[0].split()[1]
 
     def getFilePath(self, path):
-        filePath = os.getcwd() + self.parentFolder + path
-        if(path.endswith('/')):
-            filePath += 'index.html'
-        return filePath
+        return os.path.abspath(os.getcwd() + self.parentFolder + path + 'index.html') if path.endswith('/') else os.path.abspath(os.getcwd() + self.parentFolder + path)
 
     def pathCheck(self, path):
         return os.path.exists(os.path.abspath(os.getcwd() + self.parentFolder + path))
 
-    def openFile(self, filePath):
-        file = open(filePath, 'rb')
-        response = file.read()
-        file.close()
-        return response
-
     def getMimeType(self, filePath):
-        if(filePath.endswith(".css")):
-            return 'text/css\r\n'
-        return 'text/html\r\n'
+        return 'text/css\r\n' if filePath.endswith(".css") else 'text/html\r\n'
 
-    def response405(self):
-        return ('HTTP/1.1 405 Method Not Allowed\n\n', '<html><body><center><h3>Error 405: Method Not Allowed</h3><p>Python HTTP Server</p></center></body></html>'.encode(
+    def response301(self, path):
+        return (f'HTTP/1.1 301 Moved Permanently\nLocation: {path}/\n\n', '<html><body><center><h3>Error 301: Moved Permanently</h3><p>Python HTTP Server</p></center></body></html>'.encode(
             'utf-8'))
 
     def response404(self):
         return ('HTTP/1.1 404 Not Found\n\n', '<html><body><center><h3>Error 404: File not found</h3><p>Python HTTP Server</p></center></body></html>'.encode(
             'utf-8'))
-    
-    def response301(self, path):
-        print(f'localhost:8080{path}/')
-        return (f'HTTP/1.1 301 Moved Permanently\nLocation: {path}/\n\n', '<html><body><center><h3>Error 301: Moved Permanently</h3><p>Python HTTP Server</p></center></body></html>'.encode(
+
+    def response405(self):
+        return ('HTTP/1.1 405 Method Not Allowed\n\n', '<html><body><center><h3>Error 405: Method Not Allowed</h3><p>Python HTTP Server</p></center></body></html>'.encode(
             'utf-8'))
 
     def handle(self):
@@ -79,31 +71,31 @@ class MyWebServer(socketserver.BaseRequestHandler):
         path = self.getPath()
         filePath = self.getFilePath(path)
 
-        # print(os.path.isfile(os.path.abspath(
-        #     os.getcwd() + self.parentFolder + filePath)))
-        print(os.path.isfile(filePath))
 
+        print(filePath)
         if method != "GET":
             header, response = self.response405()
 
         else:
-            try:
-                if(not (os.path.isfile(filePath)) and self.pathCheck(path)):
-                    
+            if(not (os.path.isfile(filePath)) and self.pathCheck(path)):             
                     header, response = self.response301(path)
-                else:
-                    header = 'HTTP/1.1 200 OK\r\n'
+            elif(os.getcwd() not in filePath):
+                header, response = self.response404()
+            else: 
+                try:
                     response = self.openFile(filePath)
+                    header = 'HTTP/1.1 200 OK\r\n'
                     mimetype = self.getMimeType(filePath)
                     header += 'Content-Type: ' + mimetype + '\n\n'
-
-            except Exception as e:
-                header, response = self.response404()
+                    
+                except Exception as e:
+                    header, response = self.response404()
             
-
+        print(header)
         final_response = header.encode('utf-8')
         final_response += response
         self.request.sendall(final_response)
+        self.request.close()
 
 
 if __name__ == "__main__":
