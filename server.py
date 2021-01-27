@@ -27,7 +27,7 @@ from pathlib import Path
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
-
+PARENTFOLDER = "/www"
 class MyWebServer(socketserver.BaseRequestHandler):
     def openFile(self, filePath):
         with open(filePath,'rb') as file:
@@ -45,6 +45,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def pathCheck(self, path):
         return os.path.exists(os.path.abspath(os.getcwd() + self.parentFolder + path))
 
+    def isFileCheck(self, path):
+        return os.path.isfile(path)
+
     def getMimeType(self, filePath):
         return 'text/css\r\n' if filePath.endswith(".css") else 'text/html\r\n'
 
@@ -61,37 +64,31 @@ class MyWebServer(socketserver.BaseRequestHandler):
             'utf-8'))
 
     def handle(self):
-        self.parentFolder = "/www"
+        self.parentFolder = PARENTFOLDER
         self.data = self.request.recv(1024).strip().decode('utf-8')
-        # self.request.sendall(bytearray("OK", 'utf-8'))
         print("Got a request of: %s\n" % self.data)
 
-        # Get method and path
         method = self.getMethod()
         path = self.getPath()
         filePath = self.getFilePath(path)
 
 
-        print(filePath)
         if method != "GET":
             header, response = self.response405()
-
-        else:
-            if(not (os.path.isfile(filePath)) and self.pathCheck(path)):             
-                    header, response = self.response301(path)
-            elif(os.getcwd() not in filePath):
+        elif((not self.isFileCheck(filePath)) and (self.pathCheck(path))):             
+                header, response = self.response301(path)
+        elif(os.getcwd() not in filePath):
+            header, response = self.response404()
+        else: 
+            try:
+                response = self.openFile(filePath)
+                header = 'HTTP/1.1 200 OK\r\n'
+                mimetype = self.getMimeType(filePath)
+                header += 'Content-Type: ' + mimetype + '\n\n'
+                
+            except Exception as e:
                 header, response = self.response404()
-            else: 
-                try:
-                    response = self.openFile(filePath)
-                    header = 'HTTP/1.1 200 OK\r\n'
-                    mimetype = self.getMimeType(filePath)
-                    header += 'Content-Type: ' + mimetype + '\n\n'
-                    
-                except Exception as e:
-                    header, response = self.response404()
-            
-        print(header)
+
         final_response = header.encode('utf-8')
         final_response += response
         self.request.sendall(final_response)
