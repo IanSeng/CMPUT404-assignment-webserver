@@ -67,7 +67,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         self.parentFolder = PARENTFOLDER
         self.data = self.request.recv(1024).strip().decode('utf-8')
-        print("Got a request of: %s\n" % self.data)
+        # print("Got a request of: %s\n" % self.data)
 
         method = self.getMethod()
         path = self.getPath()
